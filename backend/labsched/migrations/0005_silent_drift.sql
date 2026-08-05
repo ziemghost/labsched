@@ -1,0 +1,15 @@
+-- Silent drift was implemented by setting the simulated instrument's own
+-- reported health to 'degraded'. The scheduler reads exactly that through
+-- `heartbeat()` and immediately marks the device suspect, so the instrument
+-- was announcing its own degradation, and the control chart was confirming
+-- something already known rather than discovering anything.
+--
+-- That is the opposite of the claim the feature exists to demonstrate: an
+-- instrument that keeps answering, keeps reporting success, and can only be
+-- caught by comparing its controls against its own history.
+--
+-- So the two are now separate facts about a simulated instrument. `health` is
+-- what it *says* about itself, and a real instrument reporting `degraded` is a
+-- legitimate thing the scheduler should act on. `silent_drift` is what is
+-- actually true of its measurements, and it is reported to nobody.
+alter table sim_device_health add column if not exists silent_drift boolean not null default false;

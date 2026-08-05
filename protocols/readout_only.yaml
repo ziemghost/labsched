@@ -1,0 +1,19 @@
+protocol: readout_only
+version: 1
+description: >
+  A bare plate read. Exists to demonstrate a narrow agent token that may use
+  readers and nothing else, so submitting binding_screen with it is refused at
+  admission, naming the step and the instrument class it would need.
+
+inputs:
+  plates: {min: 1, max: 4}
+
+params:
+  wavelength_nm: {type: integer, default: 450, min: 200, max: 1000}
+
+steps:
+  - id: absorbance
+    op: absorbance_read
+    with:
+      wavelength_nm: "{{ params.wavelength_nm }}"
+    for_each: plate

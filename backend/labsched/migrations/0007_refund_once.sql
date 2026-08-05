@@ -1,0 +1,15 @@
+-- Whether a reservation has been refunded was being *inferred* from whether it
+-- still held the instrument or the plate. That is not the same fact, and the
+-- gap between them was a real double-charge: a `calibration_drift` fault holds
+-- neither, so both are released the moment the question opens, and by the time
+-- an engineer resolves it the refund condition is false. The customer paid for
+-- the step once, got it requeued, and paid again.
+--
+-- The inverse was also true: aborting a run released reservations for steps
+-- that never ran, and the intervention pane printed "12 credits released" while
+-- the ledger did not move.
+--
+-- So record it. A refund is now exactly-once per reservation, and both
+-- questions, "has this been refunded?" and "does this still hold anything?",
+-- each have their own answer.
+alter table reservations add column if not exists refunded_at timestamptz;

@@ -1,0 +1,48 @@
+protocol: binding_screen
+version: 4
+description: >
+  Prep, incubate and read a panel of plates. The smallest thing that is still a
+  real workflow: a serial dependency, an instrument class with more than one
+  member so scheduling is an actual choice, a long blocking hold, and a
+  measurement that can come back suspect.
+
+inputs:
+  plates: {min: 1, max: 8}
+
+params:
+  # No default: which antigen this is a screen for is not something the lab
+  # can guess. The example is what the submission form prefills, so the first
+  # thing a new operator sees is a request that would actually be admitted.
+  target:          {type: string, required: true, example: TREM2}
+  incubation_min:  {type: integer, default: 30, min: 10, max: 240}
+  transfer_ul:     {type: number,  default: 40, min: 1, max: 300}
+
+steps:
+  - id: prep
+    op: liquid_transfer
+    with:
+      volume_ul: "{{ params.transfer_ul }}"
+      source: buffer_a
+    for_each: plate
+
+  - id: incubate
+    op: incubate
+    with:
+      minutes: "{{ params.incubation_min }}"
+      celsius: 25
+    after: [prep]
+    for_each: plate
+
+  - id: read
+    op: bli_read
+    with:
+      target: "{{ params.target }}"
+      concentrations_nM: [1000, 316.2, 100, 31.6, 0]
+      replicates: 3
+    after: [incubate]
+    for_each: plate
+    # Failure policy lives in the protocol, not hardcoded in the scheduler:
+    # a control well more than 15% off this instrument's rolling median opens
+    # a calibration-drift question instead of silently releasing the number.
+    qc:
+      control_within: 0.15
